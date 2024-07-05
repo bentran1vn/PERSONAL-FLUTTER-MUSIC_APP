@@ -11,7 +11,7 @@ class AudioPlayerManager {
   final player = AudioPlayer();
   Stream<DurationState>? durationState;
   
-  void prepare({bool isNewSong = false}) {
+  void prepare({bool isNewSong = true}) {
     durationState = Rx.combineLatest2<Duration,
                           PlaybackEvent,
                           DurationState>(

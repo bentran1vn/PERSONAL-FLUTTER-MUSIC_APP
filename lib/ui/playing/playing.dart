@@ -46,9 +46,9 @@ class _PlayingPageState extends State<PlayingPage> with SingleTickerProviderStat
      _audioPlayerManager = AudioPlayerManager();
      if(_audioPlayerManager.songURL.compareTo(_song.source) != 0){
        _audioPlayerManager.updateSongUrl(_song.source);
-       _audioPlayerManager.prepare(isNewSong: true);
-     } else {
        _audioPlayerManager.prepare();
+     } else {
+       _audioPlayerManager.prepare(isNewSong: false);
      }
      _selectedItemIndex = widget.songs.indexOf(_song);
      _loopMode = LoopMode.off;
