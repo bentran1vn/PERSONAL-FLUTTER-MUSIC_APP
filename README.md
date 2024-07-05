@@ -19,8 +19,8 @@ samples, guidance on mobile development, and a full API reference.
 
 <div style="display: flex; justify-content: center; align-items: center; gap: 20px;">
 
-  <img src="https://github.com/bentran1vn/PERSONAL-FLUTTER-MUSIC_APP/blob/main/demo/demo_home1.png" alt="Home Screen" width="200" height="450" style="padding-right: 30px;">
-
+  <img src="https://github.com/bentran1vn/PERSONAL-FLUTTER-MUSIC_APP/blob/main/demo/demo_home1.png" alt="Home Screen" width="200" height="450">
+  <div style="width: 20px" >
   <img src="https://github.com/bentran1vn/PERSONAL-FLUTTER-MUSIC_APP/blob/main/demo/demo_detail1.png" alt="Detail Screen" width="200" height="450">
 
 </div>
