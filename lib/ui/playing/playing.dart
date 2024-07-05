@@ -1,6 +1,9 @@
+import 'dart:math';
+
 import 'package:audio_video_progress_bar/audio_video_progress_bar.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:music_app/data/model/song.dart';
 import 'package:music_app/ui/playing/audio_player_manager.dart';
 
@@ -27,15 +30,28 @@ class PlayingPage extends StatefulWidget {
 class _PlayingPageState extends State<PlayingPage> with SingleTickerProviderStateMixin{
   late AnimationController _imageAnimaController;
   late AudioPlayerManager _audioPlayerManager;
+  late int _selectedItemIndex;
+  late Song _song;
+  double _currentAnimationPosition = 0.0;
+  bool _isShuffer = false;
+  late LoopMode _loopMode;
 
   @override
   void initState() {
+     _song = widget.playingSong;
      _imageAnimaController = AnimationController(
        vsync: this,
-       duration: const Duration(microseconds: 12000),
+       duration: const Duration(milliseconds: 12000),
      );
-     _audioPlayerManager = AudioPlayerManager(songURL: widget.playingSong.source);
-     _audioPlayerManager.init();
+     _audioPlayerManager = AudioPlayerManager();
+     if(_audioPlayerManager.songURL.compareTo(_song.source) != 0){
+       _audioPlayerManager.updateSongUrl(_song.source);
+       _audioPlayerManager.prepare(isNewSong: true);
+     } else {
+       _audioPlayerManager.prepare();
+     }
+     _selectedItemIndex = widget.songs.indexOf(_song);
+     _loopMode = LoopMode.off;
      super.initState();
   }
 
@@ -58,7 +74,7 @@ class _PlayingPageState extends State<PlayingPage> with SingleTickerProviderStat
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(widget.playingSong.album),
+                Text(_song.album),
                 const SizedBox(height: 16,),
                 const Text('_ ___ _'),
                 const SizedBox(height: 30,),
@@ -67,7 +83,7 @@ class _PlayingPageState extends State<PlayingPage> with SingleTickerProviderStat
                     borderRadius: BorderRadius.circular(radius),
                     child: FadeInImage.assetNetwork(
                         placeholder: 'assets/i1.png',
-                        image: widget.playingSong.image,
+                        image: _song.image,
                         width: screenWidth - delta,
                         height: screenWidth - delta,
                         imageErrorBuilder: (context, error, stackTrace) {
@@ -93,14 +109,14 @@ class _PlayingPageState extends State<PlayingPage> with SingleTickerProviderStat
                             ),
                             Column(
                               children: [
-                                Text(widget.playingSong.title,
+                                Text(_song.title,
                                   style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                                       color: Theme.of(context).textTheme.bodyMedium!.color
                                   ),
                                 ),
                                 const SizedBox(height: 8,),
                                 Text(
-                                  widget.playingSong.artist,
+                                  _song.artist,
                                   style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                                     color: Theme.of(context).textTheme.bodyMedium!.color
                                   ),
@@ -131,16 +147,22 @@ class _PlayingPageState extends State<PlayingPage> with SingleTickerProviderStat
     );
   }
 
+  @override
+  void dispose() {
+    _imageAnimaController.dispose();
+    super.dispose();
+  }
+
   Widget _mediaButtons(){
     return SizedBox(
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          MediaButtonControl(function: null, icon: Icons.shuffle, color: Colors.deepPurple, size: 24),
-          MediaButtonControl(function: null, icon: Icons.skip_previous, color: Colors.deepPurple, size: 36),
-          MediaButtonControl(function: null, icon: Icons.play_arrow_sharp, color: Colors.deepPurple, size: 48),
-          MediaButtonControl(function: null, icon: Icons.skip_next, color: Colors.deepPurple, size: 36),
-          MediaButtonControl(function: null, icon: Icons.repeat, color: Colors.deepPurple, size: 24)
+          MediaButtonControl(function: _setSuffle, icon: Icons.shuffle, color: _getSuffleColor(), size: 24),
+          MediaButtonControl(function: _setPreviousSong, icon: Icons.skip_previous, color: Colors.deepPurple, size: 36),
+          _playButton(),
+          MediaButtonControl(function: _setNextSong, icon: Icons.skip_next, color: Colors.deepPurple, size: 36),
+          MediaButtonControl(function: _setRepeatOptions, icon: _repeatingIcon(), color: _getRepeatingIconColor(), size: 24)
         ],
       ),
     );
@@ -154,9 +176,166 @@ class _PlayingPageState extends State<PlayingPage> with SingleTickerProviderStat
           final progress = durationState?.progress ?? Duration.zero;
           final buffered = durationState?.buffer ?? Duration.zero;
           final total = durationState?.total ?? Duration.zero;
-          return ProgressBar(progress: progress, total: total);
+          return ProgressBar(
+              progress: progress,
+              total: total,
+              buffered: buffered,
+              onSeek: _audioPlayerManager.player.seek,
+              barHeight: 5.0,
+              barCapShape: BarCapShape.round,
+              baseBarColor: Colors.grey.withOpacity(0.3),
+              progressBarColor: Colors.green,
+              bufferedBarColor: Colors.grey.withOpacity(0.3),
+              thumbColor: Colors.deepPurple,
+              thumbGlowColor: Colors.green.withOpacity(0.3),
+              thumbRadius: 10.0,
+          );
         }
     );
+  }
+  
+  StreamBuilder<PlayerState> _playButton (){
+    return StreamBuilder(stream: _audioPlayerManager.player.playerStateStream, builder: (context, snapshot) {
+      final playState = snapshot.data;
+      final processingState = playState?.processingState;
+      final playing = playState?.playing;
+      if(processingState == ProcessingState.loading || processingState == ProcessingState.buffering) {
+        _pauseRotationAnim();
+        return Container(
+          margin: const EdgeInsets.all(8),
+          width: 48,
+          height: 48,
+          child: const CircularProgressIndicator(),
+        );
+      } else if(playing != true) {
+        return MediaButtonControl(
+          function: () {
+            _audioPlayerManager.player.play();
+          },
+          icon: Icons.play_arrow,
+          color: null,
+          size: 48
+        );
+      } else if(processingState != ProcessingState.completed) {
+        _playRotationAnim();
+        return MediaButtonControl(
+            function: () {
+              _audioPlayerManager.player.pause();
+              _pauseRotationAnim();
+            },
+            icon: Icons.pause,
+            color: null,
+            size: 48
+        );
+      } else {
+        if(processingState == ProcessingState.completed){
+          _stopRotationAnim();
+          _resetRotaionAnim();
+        }
+        return MediaButtonControl(
+            function: () {
+              _audioPlayerManager.player.seek(Duration.zero);
+              _resetRotaionAnim();
+              _playRotationAnim();
+            },
+            icon: Icons.replay,
+            color: null,
+            size: 48
+        );
+      }
+    });
+  }
+
+  void _setNextSong(){
+    if(!_isShuffer){
+      if(_selectedItemIndex == widget.songs.length - 1){
+        _selectedItemIndex = 0;
+      } else {
+        ++_selectedItemIndex;
+      }
+    } else {
+      var random = Random();
+      _selectedItemIndex = random.nextInt(widget.songs.length);
+    }
+    final nextSong = widget.songs[_selectedItemIndex];
+    _audioPlayerManager.updateSongUrl(nextSong.source);
+    _resetRotaionAnim();
+    setState(() {
+      _song = nextSong;
+    });
+  }
+
+  void _setPreviousSong(){
+    if(!_isShuffer){
+      if(_selectedItemIndex == 0){
+        _selectedItemIndex = widget.songs.length - 1;
+      } else {
+        --_selectedItemIndex;
+      }
+    } else {
+      var random = Random();
+      _selectedItemIndex = random.nextInt(widget.songs.length);
+    }
+    final nextSong = widget.songs[_selectedItemIndex];
+    _audioPlayerManager.updateSongUrl(nextSong.source);
+    _resetRotaionAnim();
+    setState(() {
+      _song = nextSong;
+    });
+  }
+
+  void _playRotationAnim(){
+    _imageAnimaController.forward(from: _currentAnimationPosition);
+    _imageAnimaController.repeat();
+  }
+
+  void _pauseRotationAnim(){
+    _stopRotationAnim();
+    _currentAnimationPosition = _imageAnimaController.value;
+  }
+
+  void _stopRotationAnim(){
+    _imageAnimaController.stop();
+  }
+
+  void _resetRotaionAnim(){
+    _currentAnimationPosition = 0.0;
+    _imageAnimaController.value = _currentAnimationPosition;
+  }
+
+  void _setSuffle(){
+    setState(() {
+      _isShuffer = !_isShuffer;
+    });
+  }
+
+  Color? _getSuffleColor(){
+    return _isShuffer ? Colors.deepPurple : Colors.grey;
+  }
+
+  IconData _repeatingIcon(){
+    return switch(_loopMode){
+      LoopMode.one => Icons.repeat_one,
+      LoopMode.all => Icons.repeat,
+      _ => Icons.repeat
+    };
+  }
+
+  Color? _getRepeatingIconColor(){
+    return _loopMode != LoopMode.off ? Colors.deepPurple : Colors.grey;
+  }
+
+  void _setRepeatOptions(){
+    if(_loopMode == LoopMode.off){
+      _loopMode = LoopMode.one;
+    } else if(_loopMode == LoopMode.one){
+      _loopMode = LoopMode.all;
+    } else {
+      _loopMode = LoopMode.off;
+    }
+    setState(() {
+      _audioPlayerManager.player.setLoopMode(_loopMode);
+    });
   }
 }
 

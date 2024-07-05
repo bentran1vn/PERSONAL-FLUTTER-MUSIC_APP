@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:music_app/data/model/song.dart';
 import 'package:music_app/ui/discovery/discovery.dart';
 import 'package:music_app/ui/home/viewmodel.dart';
+import 'package:music_app/ui/playing/audio_player_manager.dart';
 import 'package:music_app/ui/playing/playing.dart';
 import 'package:music_app/ui/settings/settings.dart';
 import 'package:music_app/ui/user/user.dart';
@@ -79,6 +80,7 @@ class HomeTabPage extends StatefulWidget {
 }
 
 class _HomeTabPageState extends State<HomeTabPage> {
+
   List<Song> songs = [];
   late MusicAppViewModel _viewModel;
 
@@ -88,6 +90,12 @@ class _HomeTabPageState extends State<HomeTabPage> {
     _viewModel.loadSongs();
     observeData();
     super.initState();
+  }
+
+  void observeData(){
+    _viewModel.songStream.stream.listen((songList) {
+      songs.addAll(songList);
+    });
   }
 
   @override
@@ -100,6 +108,7 @@ class _HomeTabPageState extends State<HomeTabPage> {
   @override
   void dispose(){
     _viewModel.songStream.close();
+    AudioPlayerManager().dispose();
     super.dispose();
   }
 
@@ -141,11 +150,7 @@ class _HomeTabPageState extends State<HomeTabPage> {
     return _SongItemSection(parent: this, song: songs[index]);
   }
 
-  void observeData(){
-    _viewModel.songStream.stream.listen((songList) {
-      songs.addAll(songList);
-    });
-  }
+
 
   void showBottomSheet(){
     showModalBottomSheet(context: context, builder: (context) {
