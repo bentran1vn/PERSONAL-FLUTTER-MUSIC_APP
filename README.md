@@ -15,6 +15,9 @@ For help getting started with Flutter development, view the
 [online documentation](https://docs.flutter.dev/), which offers tutorials,
 samples, guidance on mobile development, and a full API reference.
 
+## Some Picture About The App
+![Home Screen]([https://github.com/bentran1vn/PERSONAL-FLUTTER-MUSIC_APP/blob/main/demo/thumbnail.png](https://github.com/bentran1vn/PERSONAL-FLUTTER-MUSIC_APP/blob/main/demo/demo_home1.png))
+
 ## Demo
 [Watch the demo](https://github.com/bentran1vn/PERSONAL-FLUTTER-MUSIC_APP/blob/main/demo/demo1.webm)
 
