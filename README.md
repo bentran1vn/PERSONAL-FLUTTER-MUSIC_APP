@@ -18,6 +18,8 @@ samples, guidance on mobile development, and a full API reference.
 ## Some Picture About The App
 <img src="https://github.com/bentran1vn/PERSONAL-FLUTTER-MUSIC_APP/blob/main/demo/demo_home1.png" alt="Home Screen" width="200" height="450">
 
+<img src="https://github.com/bentran1vn/PERSONAL-FLUTTER-MUSIC_APP/blob/main/demo/demo_detail1.png" alt="Home Screen" width="200" height="450">
+
 ## Demo
 [Watch the demo](https://github.com/bentran1vn/PERSONAL-FLUTTER-MUSIC_APP/blob/main/demo/demo1.webm)
 
